@@ -16,7 +16,7 @@ Mail Fetcher は Python を使用してメールサーバーからメールを�
 
 ### 基本実行
 ```bash
-python main.py
+uv run main.py
 ```
 
 ### 環境変数を直接指定（IMAP）
@@ -25,7 +25,7 @@ PROTOCOL="IMAP" \
 EMAIL_ADDRESS="your-email@example.com" \
 EMAIL_PASSWORD="your-password" \
 IMAP_SERVER="imap.gmail.com" \
-python main.py
+uv run main.py
 ```
 
 ### 環境変数を直接指定（POP3）
@@ -34,7 +34,7 @@ PROTOCOL="POP3" \
 EMAIL_ADDRESS="your-email@example.com" \
 EMAIL_PASSWORD="your-password" \
 POP3_SERVER="pop.gmail.com" \
-python main.py
+uv run main.py
 ```
 
 ## 必要な環境変数

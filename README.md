@@ -53,7 +53,7 @@ POP3 使用時：
 環境変数を設定した後、以下のコマンドでプログラムを実行：
 
 ```bash
-python main.py
+uv run main.py
 ```
 
 または、環境変数を直接指定して実行：
@@ -64,7 +64,7 @@ PROTOCOL="IMAP" \
 EMAIL_ADDRESS="your-email@example.com" \
 EMAIL_PASSWORD="your-password" \
 IMAP_SERVER="imap.gmail.com" \
-python main.py
+uv run main.py
 ```
 
 POP3 の場合：
@@ -73,7 +73,7 @@ PROTOCOL="POP3" \
 EMAIL_ADDRESS="your-email@example.com" \
 EMAIL_PASSWORD="your-password" \
 POP3_SERVER="pop.gmail.com" \
-python main.py
+uv run main.py
 ```
 
 ## 主要なメールプロバイダーの設定
