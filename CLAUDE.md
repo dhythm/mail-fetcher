@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-Mail Fetcher は Python を使用してメールサーバーからメールを取得するシンプルなプログラムです。IMAP および POP3 プロトコルに対応し、SSL/TLS を使用した安全な接続でメールを取得できます。
+Mail Fetcher は Python を使用してメールサーバーからメールを取得し、OpenAI API を使って技術案件情報を分析するプログラムです。IMAP および POP3 プロトコルに対応し、SSL/TLS を使用した安全な接続でメールを取得できます。分析結果はCSVファイルに出力されます。
 
 ## ファイル構成
 
@@ -37,6 +37,16 @@ POP3_SERVER="pop.gmail.com" \
 uv run main.py
 ```
 
+### AI分析機能付きで実行（IMAP）
+```bash
+PROTOCOL="IMAP" \
+EMAIL_ADDRESS="your-email@example.com" \
+EMAIL_PASSWORD="your-password" \
+IMAP_SERVER="imap.gmail.com" \
+OPENAI_API_KEY="your-openai-api-key" \
+uv run main.py
+```
+
 ## 必要な環境変数
 
 ### 共通
@@ -53,10 +63,14 @@ uv run main.py
 - `POP3_SERVER`: POP3 サーバーホスト名
 - `POP3_PORT`: POP3 ポート番号（デフォルト: 995）
 
+### AI分析機能用（オプション）
+- `OPENAI_API_KEY`: OpenAI API キー（設定した場合のみAI分析が実行される）
+- `OPENAI_MODEL`: 使用するOpenAIモデル（デフォルト: `gpt-3.5-turbo`）
+
 ## 技術詳細
 
 - **Python バージョン**: 3.10 以上
-- **使用ライブラリ**: 標準ライブラリのみ（imaplib, poplib, ssl, email など）
+- **使用ライブラリ**: 標準ライブラリ（imaplib, poplib, ssl, email など）+ openai, python-dotenv
 - **パッケージ管理**: uv を使用
 - **文字エンコーディング**: UTF-8、MIME エンコード対応
 
@@ -66,7 +80,9 @@ uv run main.py
 2. **セキュア接続**: SSL/TLS を使用した暗号化通信
 3. **文字化け対策**: 日本語を含む MIME エンコードされたメールの適切な処理
 4. **本文取得**: マルチパート/プレーンテキスト両方に対応
-5. **エラーハンドリング**: 接続エラーや認証エラーの適切な処理
+5. **AI分析**: OpenAI API を使用した技術案件情報の自動抽出
+6. **データ出力**: 分析結果をCSV形式で出力
+7. **エラーハンドリング**: 接続エラーや認証エラーの適切な処理
 
 ## よくある対応
 
