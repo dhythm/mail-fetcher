@@ -1,10 +1,11 @@
 import imaplib
+import poplib
 import ssl
 import email
 from email.header import decode_header
 import os
 import sys
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from datetime import datetime
 
 
@@ -75,8 +76,32 @@ def connect_to_imap_server(server: str, port: int, email_address: str, password:
         sys.exit(1)
 
 
-def fetch_emails(mail: imaplib.IMAP4_SSL, num_emails: int = 10) -> List[Tuple[str, str, str, str]]:
-    """最新のメールを取得する"""
+def connect_to_pop3_server(server: str, port: int, email_address: str, password: str) -> poplib.POP3_SSL:
+    """POP3サーバーに接続してログインする"""
+    try:
+        print(f"POP3サーバー {server}:{port} に接続中...")
+        
+        # SSL接続を確立
+        context = ssl.create_default_context()
+        mail = poplib.POP3_SSL(server, port, context=context)
+        
+        # ログイン
+        print(f"メールアドレス {email_address} でログイン中...")
+        mail.user(email_address)
+        mail.pass_(password)
+        print("ログイン成功！")
+        
+        return mail
+    except poplib.error_proto as e:
+        print(f"POP3接続エラー: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"接続エラー: {e}")
+        sys.exit(1)
+
+
+def fetch_emails_imap(mail: imaplib.IMAP4_SSL, num_emails: int = 10) -> List[Tuple[str, str, str, str]]:
+    """IMAPを使用して最新のメールを取得する"""
     emails = []
     
     try:
@@ -128,6 +153,55 @@ def fetch_emails(mail: imaplib.IMAP4_SSL, num_emails: int = 10) -> List[Tuple[st
         return emails
 
 
+def fetch_emails_pop3(mail: poplib.POP3_SSL, num_emails: int = 10) -> List[Tuple[str, str, str, str]]:
+    """POP3を使用して最新のメールを取得する"""
+    emails = []
+    
+    try:
+        # メールボックスの統計情報を取得
+        num_messages = len(mail.list()[1])
+        if num_messages == 0:
+            print("メールが見つかりませんでした。")
+            return emails
+        
+        # 取得するメールの数を決定
+        start_index = max(1, num_messages - num_emails + 1)
+        end_index = num_messages + 1
+        
+        print(f"\n最新の{min(num_emails, num_messages)}件のメールを取得中...")
+        
+        # 最新のメールから順に取得（逆順）
+        for i in range(num_messages, start_index - 1, -1):
+            try:
+                # メールを取得
+                raw_email_lines = mail.retr(i)[1]
+                raw_email = b'\n'.join(raw_email_lines)
+                msg = email.message_from_bytes(raw_email)
+                
+                # ヘッダー情報を取得
+                subject = decode_mime_header(msg.get('Subject', '(件名なし)'))
+                from_addr = decode_mime_header(msg.get('From', '(送信者不明)'))
+                date_str = msg.get('Date', '')
+                
+                # 本文を取得
+                body = get_email_body(msg)
+                
+                emails.append((subject, from_addr, date_str, body))
+                
+                if len(emails) >= num_emails:
+                    break
+                    
+            except Exception as e:
+                print(f"メール {i} の取得中にエラーが発生しました: {e}")
+                continue
+                
+        return emails
+        
+    except Exception as e:
+        print(f"メール取得エラー: {e}")
+        return emails
+
+
 def display_emails(emails: List[Tuple[str, str, str, str]]) -> None:
     """取得したメールを表示する"""
     if not emails:
@@ -156,30 +230,61 @@ def main():
     print("メール取得プログラムを開始します...\n")
     
     # 環境変数から設定を取得
+    protocol = get_env_variable('PROTOCOL', 'IMAP').upper()
     email_address = get_env_variable('EMAIL_ADDRESS')
     email_password = get_env_variable('EMAIL_PASSWORD')
-    imap_server = get_env_variable('IMAP_SERVER')
-    imap_port = int(get_env_variable('IMAP_PORT', '993'))
     num_emails = int(get_env_variable('NUM_EMAILS', '10'))
     
-    # IMAPサーバーに接続
-    mail = connect_to_imap_server(imap_server, imap_port, email_address, email_password)
-    
-    try:
-        # メールを取得
-        emails = fetch_emails(mail, num_emails)
+    if protocol == 'IMAP':
+        # IMAP設定
+        server = get_env_variable('IMAP_SERVER')
+        port = int(get_env_variable('IMAP_PORT', '993'))
         
-        # メールを表示
-        display_emails(emails)
+        # IMAPサーバーに接続
+        mail = connect_to_imap_server(server, port, email_address, email_password)
         
-    finally:
-        # 接続を閉じる
         try:
-            mail.close()
-            mail.logout()
-            print("接続を終了しました。")
-        except:
-            pass
+            # メールを取得
+            emails = fetch_emails_imap(mail, num_emails)
+            
+            # メールを表示
+            display_emails(emails)
+            
+        finally:
+            # 接続を閉じる
+            try:
+                mail.close()
+                mail.logout()
+                print("接続を終了しました。")
+            except:
+                pass
+                
+    elif protocol == 'POP3':
+        # POP3設定
+        server = get_env_variable('POP3_SERVER')
+        port = int(get_env_variable('POP3_PORT', '995'))
+        
+        # POP3サーバーに接続
+        mail = connect_to_pop3_server(server, port, email_address, email_password)
+        
+        try:
+            # メールを取得
+            emails = fetch_emails_pop3(mail, num_emails)
+            
+            # メールを表示
+            display_emails(emails)
+            
+        finally:
+            # 接続を閉じる
+            try:
+                mail.quit()
+                print("接続を終了しました。")
+            except:
+                pass
+    else:
+        print(f"エラー: サポートされていないプロトコル '{protocol}' が指定されました。")
+        print("PROTOCOL環境変数には 'IMAP' または 'POP3' を指定してください。")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
