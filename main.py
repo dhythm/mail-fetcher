@@ -2,11 +2,13 @@ import imaplib
 import poplib
 import ssl
 import email
+import email.message
 from email.header import decode_header
 import os
 import sys
 from typing import List, Tuple, Optional, Union
 from datetime import datetime
+from dotenv import load_dotenv
 
 
 def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
@@ -228,6 +230,9 @@ def display_emails(emails: List[Tuple[str, str, str, str]]) -> None:
 def main():
     """メイン処理"""
     print("メール取得プログラムを開始します...\n")
+    
+    # .envファイルを読み込み
+    load_dotenv()
     
     # 環境変数から設定を取得
     protocol = get_env_variable('PROTOCOL', 'IMAP').upper()
