@@ -6,6 +6,7 @@ import email.message
 from email.header import decode_header
 import os
 import sys
+import csv
 from typing import List, Tuple, Optional, Union
 from datetime import datetime
 from dotenv import load_dotenv
@@ -204,6 +205,41 @@ def fetch_emails_pop3(mail: poplib.POP3_SSL, num_emails: int = 10) -> List[Tuple
         return emails
 
 
+def export_emails_to_csv(emails: List[Tuple[str, str, str, str]]) -> str:
+    """取得したメールをCSVファイルに出力する"""
+    if not emails:
+        print("出力するメールがありません。")
+        return ""
+    
+    # ファイル名にタイムスタンプを含める
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"emails_{timestamp}.csv"
+    
+    try:
+        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            
+            # ヘッダー行を書き込み
+            writer.writerow(['件名', '送信者', '日時', '本文プレビュー', '本文全体'])
+            
+            # メールデータを書き込み
+            for subject, from_addr, date_str, body in emails:
+                # 本文プレビュー（200文字まで）
+                body_preview = body[:200] + "..." if len(body) > 200 else body
+                # 改行文字を削除して一行にまとめる
+                body_preview = body_preview.replace('\n', ' ').replace('\r', ' ')
+                body_full = body.replace('\n', ' ').replace('\r', ' ')
+                
+                writer.writerow([subject, from_addr, date_str, body_preview, body_full])
+        
+        print(f"メールデータをCSVファイルに出力しました: {filename}")
+        return filename
+        
+    except Exception as e:
+        print(f"CSV出力エラー: {e}")
+        return ""
+
+
 def display_emails(emails: List[Tuple[str, str, str, str]]) -> None:
     """取得したメールを表示する"""
     if not emails:
@@ -231,8 +267,8 @@ def main():
     """メイン処理"""
     print("メール取得プログラムを開始します...\n")
     
-    # .envファイルを読み込み
-    load_dotenv()
+    # .envファイルを読み込み（既存の環境変数を上書き）
+    load_dotenv(override=True)
     
     # 環境変数から設定を取得
     protocol = get_env_variable('PROTOCOL', 'IMAP').upper()
@@ -254,6 +290,9 @@ def main():
             
             # メールを表示
             display_emails(emails)
+            
+            # CSVファイルに出力
+            export_emails_to_csv(emails)
             
         finally:
             # 接続を閉じる
@@ -278,6 +317,9 @@ def main():
             
             # メールを表示
             display_emails(emails)
+            
+            # CSVファイルに出力
+            export_emails_to_csv(emails)
             
         finally:
             # 接続を閉じる
